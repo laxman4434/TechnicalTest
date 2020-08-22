@@ -6,7 +6,7 @@ using Gluh.TechnicalTest.Database;
 
 namespace Gluh.TechnicalTest
 {
-    public class TestData
+    public class TestData 
     {
         public List<PurchaseRequirement> Create()
         {
