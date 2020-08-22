@@ -11,111 +11,130 @@ namespace Gluh.TechnicalTest
     public class PurchaseOptimizer
     {
         PurchaseOrder purchaseOrder = null;
+        readonly List<PurchaseOrder> totalPurchaseOrders = new List<PurchaseOrder>();
 
         /// <summary>
         /// Calculates the optimal set of supplier to purchase products from.
         /// ### Complete this method
         /// </summary>
+        /// Assumptions
+        /// Can't make a purchase oredr more than once from the supplier
+        /// Return optimal list of all suppliers for the product irresespective of availability
         public void Optimize(List<PurchaseRequirement> purchaseRequirements)
         {
-
-            foreach (PurchaseRequirement purchaseRequirement in purchaseRequirements)
+            purchaseRequirements.ForEach(pr =>
             {
                 // Print the Product Name, Quantity Required & Product Type
-                Console.WriteLine($"Product : {purchaseRequirement.Product.Name} \nQuantity Required : {purchaseRequirement.Quantity} \nProduct Type : {purchaseRequirement.Product.Type} \n");
+                Console.WriteLine($"Product : {pr.Product.Name} \nQuantity Required : {pr.Quantity} \nProduct Type : {pr.Product.Type} \n");
 
                 //Get the list of product & suppllier details with availability of stock
-                List<ProductStock> availableProductStock = purchaseRequirement.Product.Stock.Where(c => c.StockOnHand >= purchaseRequirement.Quantity).ToList();
+                List<ProductStock> availableProductStock = pr.Product.Stock.Where(c => c.StockOnHand > 0).ToList();
                 //Get the list of product & suppllier details where stock is unavailable
-                List<ProductStock> unavailableProductStock = purchaseRequirement.Product.Stock.Where(c => c.StockOnHand < purchaseRequirement.Quantity).ToList();
+                List<ProductStock> unavailableProductStock = pr.Product.Stock.Where(c => c.StockOnHand <= 0).ToList();
 
                 Console.WriteLine($"Total Available Suppliers : {availableProductStock.Count}   Unavailable Suppliers : {unavailableProductStock.Count} ");
                 Console.WriteLine("------------------------------------------------------\n");
 
-                //Print the supplier & product details, purchase requirement details on to the console
-                PrintAvilableSuppliers(purchaseRequirement, availableProductStock);
-                PrintUnAvilableSuppliers(purchaseRequirement, unavailableProductStock);
+                PrintData(pr, pr.Product.Stock.ToList());
 
-                if (purchaseOrder != null)
-                    Console.WriteLine($"Order placed with {purchaseOrder.SupplierName} for {purchaseOrder.QuantityOrdered} {purchaseOrder.ProductName} \n");
-                else
-                    Console.WriteLine("Order could not be placed due to unavailability of stock \n");
-
-                Console.WriteLine("***********************************************\n");
-            }
-
+                Console.WriteLine("*******************************************************\n");
+            });
         }
 
         /// <summary>
-        /// Prints the availble supplier, product details on to the console
+        /// 
         /// </summary>
         /// <param name="purchaseRequirement"></param>
         /// <param name="productStocks"></param>
-        private void PrintAvilableSuppliers(PurchaseRequirement purchaseRequirement, List<ProductStock> productStocks)
+        private void PrintData(PurchaseRequirement purchaseRequirement, List<ProductStock> productStocks)
         {
-            SortSuppliers(purchaseRequirement, productStocks);
-        }
+            int remainingQuantity = purchaseRequirement.Quantity;
+            int orderQuantity = 0;
+            List<PurchaseOrder> purchaseOrders = new List<PurchaseOrder>();
 
-        /// <summary>
-        /// Sort the available suppliers based on total cost and select the supplier who can supply required quantity with minimum cost
-        /// </summary>
-        /// <param name="purchaseRequirement"></param>
-        /// <param name="productStocks"></param>
-        private void SortSuppliers(PurchaseRequirement purchaseRequirement, List<ProductStock> productStocks)
-        {
-            //List<PurchaseOrder> purchaseOrders = new List<PurchaseOrder>();
+            productStocks = productStocks.Where(c => c.StockOnHand > 0).OrderBy(d => d.Cost).ToList();
 
-            //set the purchase order to null if no suppliers available for the product
             if (productStocks.Count == 0)
             {
-                purchaseOrder = null;
+                Console.WriteLine("Order cannot be placed due to unavailability.\n");
                 return;
             }
 
-            //Sort the stock list based on the total cost including shipping
-            productStocks = productStocks.OrderBy(l => CalculateTotalCostWithShipping(l.Cost, purchaseRequirement.Quantity, l.Supplier)).ToList();
-
             foreach (ProductStock productStock in productStocks)
             {
+                decimal totalCostWithShipping = 0m;
 
-                var totalCostWithShipping = CalculateTotalCostWithShipping(productStock.Cost, purchaseRequirement.Quantity, productStock.Supplier);
-
-                Console.WriteLine($"Product Cost : {productStock.Cost} \nStockOnHand : {productStock.StockOnHand}");
-                Console.WriteLine($"Supplier Name : {productStock.Supplier.Name}");
-                Console.WriteLine($"Total cost including shipping: {totalCostWithShipping} \n");
-
-                //Because we have already sorted the list based on TotalCost, we can place purchase order from the first item in the list
-                if (productStocks.First() == productStock)
+                if (remainingQuantity > 0)
                 {
+                    orderQuantity = remainingQuantity - productStock.StockOnHand;
+
+                    if (orderQuantity > 0)
+                        orderQuantity = productStock.StockOnHand;
+
+                    if (orderQuantity < 0)
+                        orderQuantity += productStock.StockOnHand;
+
                     purchaseOrder = new PurchaseOrder
                     {
-                        QuantityOrdered = purchaseRequirement.Quantity,
-                        TotalCost = totalCostWithShipping,
+                        QuantityOrdered = orderQuantity,
                         SupplierName = productStock.Supplier.Name,
-                        ProductName = productStock.Product.Name
+                        ProductName = productStock.Product.Name,
+                        //SupplierID = productStock.Supplier.ID
                     };
 
-                    // purchaseOrders.Add(purchaseOrder);
+                    //check if purchase order has been placed already from the suppplier
+                    if (!totalPurchaseOrders.Any(q => q.SupplierName == purchaseOrder.SupplierName))
+                    {
+                        totalCostWithShipping = CalculateTotalCostWithShipping(productStock.Cost, orderQuantity, productStock.Supplier);
+                        purchaseOrder.TotalCost = totalCostWithShipping;
+
+                        purchaseOrders.Add(purchaseOrder);
+                        totalPurchaseOrders.Add(purchaseOrder);
+
+                        remainingQuantity -= orderQuantity;
+                    }
+                    else { orderQuantity = 0; }
                 }
+                else
+                { orderQuantity = 0; }
+
+                PrintProductDetails(productStock, orderQuantity);
             }
+
+            PrintPurchaseOrderDetails(purchaseOrders);
         }
 
         /// <summary>
-        /// Print the unavailable  supplier, product details on to the console
+        /// Print all the supplier details, product details and shipping info on to the console
         /// </summary>
-        /// <param name="purchaseRequirement"></param>
-        /// <param name="productStocks"></param>
-        private void PrintUnAvilableSuppliers(PurchaseRequirement purchaseRequirement, List<ProductStock> productStocks)
+        /// <param name="productStock"></param>
+        /// <param name="orderQuantity"></param>
+        private void PrintProductDetails(ProductStock productStock, int orderQuantity)
         {
-            foreach (ProductStock productStock in productStocks)
-            {
-                //var totalCostWithShipping = CalculateTotalCostWithShipping(productStock.Cost, purchaseRequirement.Quantity, productStock.Supplier);
-
-                Console.WriteLine($"Product Cost : {productStock.Cost} \nStockOnHand : {productStock.StockOnHand}");
-                Console.WriteLine($"Supplier Name : {productStock.Supplier.Name}\n");
-                //Console.WriteLine($"Total cost including shipping: {totalCostWithShipping} \n");
-            }
+            Console.WriteLine($"Product Cost : {productStock.Cost} \nStockOnHand : {productStock.StockOnHand}");
+            Console.WriteLine($"Supplier Name : {productStock.Supplier.Name}");
+            Console.WriteLine($"Quantity Ordered : {orderQuantity}");
+            if (orderQuantity > 0)
+                Console.WriteLine($"Total cost including shipping: {CalculateTotalCostWithShipping(productStock.Cost, orderQuantity, productStock.Supplier)} \n");
+            else
+                Console.WriteLine();
         }
+
+        /// <summary>
+        /// Print the purchase Order details on to the console
+        /// </summary>
+        /// <param name="purchaseOrders"></param>
+        private void PrintPurchaseOrderDetails(List<PurchaseOrder> purchaseOrders)
+        {
+            purchaseOrders.OrderBy(m => m.QuantityOrdered).ToList().ForEach(s =>
+            {
+                Console.WriteLine($"Order placed with {s.SupplierName} for {s.QuantityOrdered} {s.ProductName} with totalcost including shipping {s.TotalCost}\n");
+            });
+
+            if (!purchaseOrders.Any())
+                Console.WriteLine($"Order could not be placed eventhough suppliers are available, because a maximum of one purchase order can be placed from a supplier\n");
+        }
+
 
         /// <summary>
         /// Calculate the total cost of the purchase order including shipping considering the minimum order value & maximum order value
@@ -124,7 +143,7 @@ namespace Gluh.TechnicalTest
         /// <param name="Quantity"></param>
         /// <param name="supplier"></param>
         /// <returns></returns>
-        private decimal CalculateTotalCostWithShipping(decimal Cost, int Quantity, Supplier supplier)
+        public decimal CalculateTotalCostWithShipping(decimal Cost, int Quantity, Supplier supplier)
         {
             var totalcost = Cost * Quantity;
             var shipping = 0m;
