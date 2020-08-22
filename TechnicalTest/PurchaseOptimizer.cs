@@ -139,13 +139,13 @@ namespace Gluh.TechnicalTest
         /// <summary>
         /// Calculate the total cost of the purchase order including shipping considering the minimum order value & maximum order value
         /// </summary>
-        /// <param name="Cost"></param>
-        /// <param name="Quantity"></param>
+        /// <param name="cost"></param>
+        /// <param name="quantity"></param>
         /// <param name="supplier"></param>
         /// <returns></returns>
-        public decimal CalculateTotalCostWithShipping(decimal Cost, int Quantity, Supplier supplier)
+        public decimal CalculateTotalCostWithShipping(decimal cost, int quantity, Supplier supplier)
         {
-            var totalcost = Cost * Quantity;
+            var totalcost = cost * quantity;
             var shipping = 0m;
 
             if (totalcost < supplier.ShippingCostMinOrderValue || totalcost > supplier.ShippingCostMaxOrderValue)
