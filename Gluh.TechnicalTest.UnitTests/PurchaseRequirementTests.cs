@@ -1,4 +1,5 @@
 using Gluh.TechnicalTest.Database;
+using Moq;
 using NUnit.Framework;
 
 namespace Gluh.TechnicalTest.UnitTests
@@ -6,12 +7,15 @@ namespace Gluh.TechnicalTest.UnitTests
     [TestFixture]
     public class Tests
     {
-        private PurchaseOptimizer _purchaseOptimizer;
+        private IPurchaseOptimizer _purchaseOptimizer;
+        private Mock<ITestData> _itestData;
 
         [SetUp]
         public void Setup()
         {
-            _purchaseOptimizer = new PurchaseOptimizer();
+            _itestData = new Mock<ITestData>();
+            _purchaseOptimizer = new PurchaseOptimizer(_itestData.Object);
+
         }
 
         [Test]
@@ -31,7 +35,7 @@ namespace Gluh.TechnicalTest.UnitTests
 
         [Test]
         [TestCase(13, 10, 140)]
-        [TestCase(120, 10, 900)]
+        [TestCase(120, 10, 1210)]
         public void CalculateTotalCostWithShipping_WhenPurchasedBelowAndAboveOrderValues_ReturnTotalCostWithShipping(int productCost, int Quantity, int expectedResult)
         {
             var result = _purchaseOptimizer.CalculateTotalCostWithShipping(productCost, Quantity, new Supplier

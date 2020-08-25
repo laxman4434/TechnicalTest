@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Autofac;
+using System;
 using System.Collections.Generic;
 
 
@@ -8,10 +9,15 @@ namespace Gluh.TechnicalTest
     {
         static void Main(string[] args)
         {
-            var purchaseRequirements = new TestData().Create();
-            var purchaseOptimizer = new PurchaseOptimizer();
+            var container = ContainerConfig.Configure();
 
-            purchaseOptimizer.Optimize(purchaseRequirements);
+            using(var scope = container.BeginLifetimeScope())
+            {
+                var app = scope.Resolve<IApplication>();
+                app.Run();
+            }
+
+            Console.ReadLine();
         }
     }
 }

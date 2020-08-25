@@ -8,10 +8,17 @@ using System.Runtime.CompilerServices;
 
 namespace Gluh.TechnicalTest
 {
-    public class PurchaseOptimizer
+    public class PurchaseOptimizer : IPurchaseOptimizer
     {
+        private readonly ITestData _itestData;
+
         PurchaseOrder purchaseOrder = null;
         readonly List<PurchaseOrder> totalPurchaseOrders = new List<PurchaseOrder>();
+
+        public PurchaseOptimizer(ITestData itestData)
+        {
+            _itestData = itestData;
+        }
 
         /// <summary>
         /// Calculates the optimal set of supplier to purchase products from.
@@ -20,8 +27,10 @@ namespace Gluh.TechnicalTest
         /// Assumptions
         /// Can't make a purchase oredr more than once from the supplier
         /// Return optimal list of all suppliers for the product irresespective of availability
-        public void Optimize(List<PurchaseRequirement> purchaseRequirements)
+        public void Optimize()
         {
+            List<PurchaseRequirement> purchaseRequirements = _itestData.Create();
+
             purchaseRequirements.ForEach(pr =>
             {
                 // Print the Product Name, Quantity Required & Product Type
